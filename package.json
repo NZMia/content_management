@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint src --ext ts,tsx,js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src --ext ts,tsx,js,jsx --fix",
-    "format": "prettier --write 'src/**/*.{js,jsx,ts,tsx,css,scss,sass,html}'"
+    "format": "prettier --write 'src/**/*.{js,jsx,ts,tsx,css,scss,sass,html}'",
+    "prepare": "husky install"
   },
   "dependencies": {
     "next": "14.2.5",
@@ -33,5 +34,17 @@
     "prettier-plugin-tailwindcss": "^0.6.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run lint & npm run format"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "npm run lint",
+      "npm run format"
+    ]
   }
 }
