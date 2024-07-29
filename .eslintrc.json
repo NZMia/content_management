@@ -11,20 +11,10 @@
     "plugin:@typescript-eslint/recommended",
     "plugin:react/recommended"
   ],
-  "plugins": ["import", "prettier", "simple-import-sort", "@typescript-eslint"],
+  "plugins": ["prettier", "simple-import-sort", "@typescript-eslint"],
   "rules": {
     "prettier/prettier": "error",
     "import/newline-after-import": "error",
-    "import/order": [
-      "error",
-      {
-        "groups": [
-          ["builtin", "external"],
-          ["internal", "parent", "sibling", "index"]
-        ],
-        "newlines-between": "always"
-      }
-    ],
     "object-curly-newline": [
       "error",
       {
@@ -39,13 +29,24 @@
       "error",
       {
         "groups": [
+          // External packages
+          ["^react", "^@?\\w"],
+          // Internal packages
+          ["^(@|components)(/.*|$)", "^\\u0000"],
+          // Side effect imports (e.g. style imports)
           ["^\\u0000"],
-          ["^@?\\w"],
-          ["^"],
-          ["^\\.\\.(?!/?$)", "^\\.\\./?$"],
-          ["^\\./(?=.*/)(?!/?$)", "^\\.(?!/?$)", "^\\./?$"]
+          // Style imports
+          ["^.+\\.s?css$"]
         ]
       }
-    ]
+    ],
+    "simple-import-sort/exports": "error"
+  },
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx"]
+      }
+    }
   }
 }
