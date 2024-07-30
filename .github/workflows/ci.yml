@@ -32,4 +32,4 @@ jobs:
       - name: Check commit message
         uses: wagoid/commitlint-github-action@v3
         with:
-          config: 'commitlint.config.js'
+          config: 'commitlint.config.cjs'
