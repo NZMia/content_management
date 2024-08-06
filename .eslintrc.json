@@ -2,45 +2,46 @@
   "extends": [
     "next",
     "eslint:recommended",
-    "prettier",
-    "next/core-web-vitals",
-    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
     "plugin:import/errors",
     "plugin:import/warnings",
     "plugin:prettier/recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:react/recommended"
+    "plugin:react/recommended",
+    "next/core-web-vitals"
   ],
-  "plugins": ["prettier", "simple-import-sort", "@typescript-eslint"],
+  "plugins": ["prettier", "import", "@typescript-eslint"],
   "rules": {
     "prettier/prettier": "error",
     "import/newline-after-import": "error",
-    "object-curly-newline": [
+   "import/order": [
       "error",
       {
-        "ImportDeclaration": {
-          "minProperties": 4,
-          "multiline": true,
-          "consistent": true
+        "groups": ["external", ["internal", "parent", "sibling", "index"], "unknown"],
+        "pathGroups": [
+          {
+            "pattern": "react",
+            "group": "external",
+            "position": "before" // Ensure React is first
+          },
+          {
+            "pattern": "{.,..}/**/*.css",
+            "group": "object", // Treat styles as a separate group
+            "position": "after" // Place style imports last
+          }
+        ],
+        "pathGroupsExcludedImportTypes": [],
+        "warnOnUnassignedImports": true,
+        "newlines-between": "always",
+        "alphabetize": {
+          "order": "asc", // Alphabetical order within groups
+          "caseInsensitive": true
         }
+        
       }
     ],
-    "simple-import-sort/imports": [
-      "error",
-      {
-        "groups": [
-          // External packages
-          ["^react", "^@?\\w"],
-          // Internal packages
-          ["^(@|components)(/.*|$)", "^\\u0000"],
-          // Side effect imports (e.g. style imports)
-          ["^\\u0000"],
-          // Style imports
-          ["^.+\\.s?css$"]
-        ]
-      }
-    ],
-    "simple-import-sort/exports": "error"
+    "import/first": "error",
+    "import/no-duplicates": "error",
+    "react/react-in-jsx-scope": "off"
   },
   "settings": {
     "import/resolver": {
