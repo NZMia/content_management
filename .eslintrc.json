@@ -13,7 +13,8 @@
   "rules": {
     "prettier/prettier": "error",
     "import/newline-after-import": "error",
-   "import/order": [
+    "@typescript-eslint/no-explicit-any": "off",
+    "import/order": [
       "error",
       {
         "groups": ["external", ["internal", "parent", "sibling", "index"], "unknown"],
