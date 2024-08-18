@@ -28,9 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} flex-column flex h-screen w-screen`}>
-        <div className="flex flex-col">
+        <div className="flex w-screen flex-col">
           <Navigation />
-          <main className="flex flex-1 content-center items-center">
+          <main className="flex flex-1 items-center justify-center">
             {children}
           </main>
           <Footer />
