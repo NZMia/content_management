@@ -18,17 +18,17 @@ export async function GET() {
     const todoBlock: QueryDatabaseResponse = await notion.databases.query({
       database_id: databaseId,
     });
-
     // Extract the relevant fields: status and plain_text title
     const extractedData: ITODO[] = todoBlock.results.map((result: any) => ({
       id: result.id as string,
       status: result.properties.Status.status.name as string,
       title: result.properties.Name.title[0]?.plain_text || ('' as string),
     }));
+
+    console.log('extractedData:', JSON.stringify(extractedData, null, 2));
     // Return the raw response for inspection
     return NextResponse.json(extractedData, { status: 200 });
   } catch (error) {
-    console.error('Error fetching data from Notion:', error);
     return NextResponse.json(
       { error: 'Failed to fetch data from Notion' },
       { status: 500 }
