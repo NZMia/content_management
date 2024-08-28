@@ -1,6 +1,6 @@
 import { GET, POST, PUT, DELETE } from '../app/api/daily-records/route';
 
-// 模拟 Notion 客户端
+// mock the Notion API client
 jest.mock('@notionhq/client', () => {
   return {
     Client: jest.fn().mockImplementation(() => ({

@@ -143,7 +143,7 @@ const DailyRecordPage: React.FC = () => {
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <div>
+    <div className="w-full">
       <h1>Notion Page Data</h1>
       {todos ? (
         <div className="mx-auto max-w-lg rounded-lg bg-gray-800 p-4 text-white">
