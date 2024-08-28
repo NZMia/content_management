@@ -36,3 +36,13 @@ jobs:
         uses: wagoid/commitlint-github-action@v6
         with:
           config: 'commitlint.config.cjs'
+      - name: Upload CI success artifact
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ci-success
+          path: ./ci-success.txt # Dummy file to indicate success
+            
+      - name: Create success file
+        if: success()
+        run: echo "CI passed" > ci-success.txt
