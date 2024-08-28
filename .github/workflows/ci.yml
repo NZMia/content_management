@@ -2,9 +2,13 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [main]
+    branches: 
+      - main
+      - 'week_seven'
   pull_request:
-    branches: [main]
+    branches: 
+      - main
+      - 'week_seven'
 
 jobs:
   build:
