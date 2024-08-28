@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ci-success
-          path: ./ci-success.txt # Dummy file to indicate success
+          path: ./ci-success.txt 
             
       - name: Create success file
         if: success()
