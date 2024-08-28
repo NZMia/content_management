@@ -1,21 +1,65 @@
-name: Vercel Preview Deployment
+name: CI/CD Workflow
+
+on:
+  push:
+    branches: 
+      # - main
+      - 'week_seven'
+  pull_request:
+    branches: 
+      # - main
+      - 'week_seven'
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-on:
-  workflow_run:
-    workflows: ["Continuous Integration"]
-    types:
-      - completed
-    branches-ignore:
-      - main
-   
 jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run format check
+        run: npm run format
+      
+      - name: Run unit test
+        run: npm run test
+
+      - name: Check commit message
+        uses: wagoid/commitlint-github-action@v6
+        with:
+          config: 'commitlint.config.cjs'
+
+      - name: Create success file
+        if: success()
+        run: echo "CI passed" > ci-success.txt
+
+      - name: Upload CI success artifact
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ci-success
+          path: ./ci-success.txt 
+
   Deploy-Preview:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: build
+    if: ${{ needs.build.result == 'success' && github.ref != 'refs/heads/main' }}
     
     steps:
       - name: Checkout code
@@ -32,4 +76,3 @@ jobs:
 
       - name: Deploy to Vercel
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
-        
