@@ -28,6 +28,9 @@ jobs:
 
       - name: Run format check
         run: npm run format
+      
+      - name: Run unit test
+        run: npm run test
 
       - name: Check commit message
         uses: wagoid/commitlint-github-action@v6
