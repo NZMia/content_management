@@ -22,7 +22,7 @@ export async function GET() {
     const extractedData: ITODO[] = todoBlock.results.map((result: any) => ({
       id: result.id as string,
       status: result.properties.Status.status.name as string,
-      title: result.properties.Name.title[0]?.plain_text || ('' as string),
+      title: result.properties.Name.title[0]?.plain_text || '',
     }));
 
     console.log('extractedData:', JSON.stringify(extractedData, null, 2));

@@ -3,12 +3,12 @@ name: CI/CD Workflow
 on:
   push:
     branches: 
-      # - main
-      - 'week_seven'
+      - 'main'
+      - 'week_*'
   pull_request:
     branches: 
-      # - main
-      - 'week_seven'
+      - 'main'
+      - 'week_*'
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -56,23 +56,57 @@ jobs:
           name: ci-success
           path: ./ci-success.txt 
 
-  Deploy-Preview:
+  deploy:
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ needs.build.result == 'success' && github.ref != 'refs/heads/main' }}
+    if: ${{ needs.build.result == 'success' }}
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      - name: Set environment
+        id: set_env
+        run: |
+          if [[ ${{ github.ref }} == refs/heads/main ]]; then
+            echo "VERCEL_ENV=production" >> $GITHUB_OUTPUT
+          else
+            echo "VERCEL_ENV=preview" >> $GITHUB_OUTPUT
+          fi
+
       - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=${{ steps.set_env.outputs.VERCEL_ENV }} --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel
-        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [[ ${{ steps.set_env.outputs.VERCEL_ENV }} == production ]]; then
+            vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} --prod
+          else
+            vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+          fi
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
