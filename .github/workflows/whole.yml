@@ -36,7 +36,7 @@ jobs:
 
       - name: Run format check
         run: npm run format
-
+      
       - name: Run unit test
         run: npm run test
 
@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ci-success
-          path: ./ci-success.txt
+          path: ./ci-success.txt 
 
   deploy:
     runs-on: ubuntu-latest
@@ -83,20 +83,13 @@ jobs:
       - name: Build Project Artifacts
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy to Vercel Preview
-        if: env.VERCEL_ENV != 'production'
+      - name: Deploy to Vercel
+        if: steps.set_env.outputs.VERCEL_ENV != 'production'
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
-
-      # manual approval step (only for production)
-      - name: Request manual approval before production deployment
-        if: env.VERCEL_ENV == 'production'
-        uses: dorny/paths-filter@v2  # Example of using an action to pause, replace with an actual manual step
-        with:
-          filters: |
-            always: '**/*'
-
+      
       - name: Deploy to Vercel Production
-        if: env.VERCEL_ENV == 'production'
+        if: steps.set_env.outputs.VERCEL_ENV == 'production'
+        uses: ./manual-approval  # 手动触发器
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} --prod
 
   create-release:

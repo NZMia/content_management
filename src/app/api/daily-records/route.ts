@@ -22,7 +22,7 @@ export async function GET() {
     const extractedData: ITODO[] = todoBlock.results.map((result: any) => ({
       id: result.id as string,
       status: result.properties.Status.status.name as string,
-      title: result.properties.Name.title[0]?.plain_text || ('' as string),
+      title: result.properties.Name.title[0]?.plain_text || '',
     }));
 
     console.log('extractedData:', JSON.stringify(extractedData, null, 2));
@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error adding data to Notion:', error);
     return NextResponse.json(
       { error: 'Failed to add data to Notion' },
       { status: 500 }
@@ -125,7 +124,6 @@ export async function PUT(req: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error updating data in Notion:', error);
     return NextResponse.json(
       { error: 'Failed to update data in Notion' },
       { status: 500 }
@@ -155,7 +153,6 @@ export async function DELETE(req: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error deleting data in Notion:', error);
     return NextResponse.json(
       { error: 'Failed to delete data from Notion' },
       { status: 500 }
