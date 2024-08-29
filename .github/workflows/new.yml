@@ -96,9 +96,8 @@ jobs:
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
       - name: Request Manual Approval
         uses: trstringer/manual-approval@v1
-        env: 
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          secret: ${{ github.TOKEN }}
           approvers: NZMia
           minimum-approvals: 1
           issue-title: "Approve production deployment"
