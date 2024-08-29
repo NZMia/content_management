@@ -87,9 +87,21 @@ jobs:
         if: steps.set_env.outputs.VERCEL_ENV != 'production'
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
       
+      - name: Manual Approval for Production Deploy
+        if: steps.set_env.outputs.VERCEL_ENV == 'production'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ secrets.GITHUB_TOKEN }}
+          approvers: nzmia
+          minimum-approvals: 1
+          issue-title: "Approve production deployment"
+          issue-body: "Please approve or deny the production deployment"
+          exclude-workflow-initiator-as-approver: false
+          additional-approved-words: ''
+          additional-denied-words: ''
+
       - name: Deploy to Vercel Production
         if: steps.set_env.outputs.VERCEL_ENV == 'production'
-        uses: ./manual-approval  # 手动触发器
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} --prod
 
   create-release:
