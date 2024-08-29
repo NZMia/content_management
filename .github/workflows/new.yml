@@ -18,22 +18,38 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
         with:
-          node-version: '18'
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
       - name: Install dependencies
-        run: npm ci
-      - name: Run linter
+        run: npm install
+
+      - name: Run lint
         run: npm run lint
-      - name: Run unit tests
-        run: npm test
+
+      - name: Run format check
+        run: npm run format
+
+      - name: Run unit test
+        run: npm run test
+
+      - name: Check commit message
+        uses: wagoid/commitlint-github-action@v6
+        with:
+          config: 'commitlint.config.cjs'
+
       - name: Create success file
-        if: success()
+        if: ${{ success() }}
         run: echo "CI passed" > ci-success.txt
+
       - name: Upload CI success artifact
-        if: success()
+        if: ${{ success() }}
         uses: actions/upload-artifact@v3
         with:
           name: ci-success
