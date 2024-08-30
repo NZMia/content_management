@@ -1,0 +1,34 @@
+# .github/workflows/preview-deploy.yml
+name: Preview Deploy
+
+on:
+  push:
+    branches:
+      - 'week_*'  # 任何 'week_*' 分支的推送触发预览部署
+  pull_request:
+    branches:
+      - main      # 任何针对 'main' 分支的 PR 触发预览部署
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download CI success artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-success
+      - name: Check CI success
+        run: test -f ci-success.txt
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel (Preview)
+        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
