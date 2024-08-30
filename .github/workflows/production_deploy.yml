@@ -5,7 +5,11 @@ on:
   push:
     tags:
       - 'v*'  # 只有符合 'v*' 格式的标签推送才会触发生产部署
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+  
 jobs:
   deploy-production:
     runs-on: ubuntu-latest
