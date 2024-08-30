@@ -4,13 +4,12 @@ on:
   push:
     branches:
       - 'week_*'  
-      - main    
+      - main     
     tags:
-      - 'v*'   
+      - 'v*'     
   pull_request:
     branches:
-      - main  
-
+      - main      
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -56,9 +55,10 @@ jobs:
           name: ci-success
           path: ./ci-success.txt
 
-  deploy:
+  deploy-preview:
     needs: ci
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/week_') || github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - name: Download CI success artifact
@@ -70,33 +70,50 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       - name: Pull Vercel Environment Information
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-          elif [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
-            vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-          elif [[ ${{ github.event_name }} == 'push' && ${{ startsWith(github.ref, 'refs/tags/v') }} ]]; then
-            vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-          fi
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - name: Build Project Artifacts
-        run: |
-          if [[ ${{ github.event_name }} == 'push' && ${{ startsWith(github.ref, 'refs/tags/v') }} ]]; then
-            vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          else
-            vercel build --token=${{ secrets.VERCEL_TOKEN }}
-          fi
-      - name: Deploy to Vercel
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-            echo "Preview URL: $DEPLOYMENT_URL"
-            echo "preview_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
-            DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-            echo "Pre-Production URL: $DEPLOYMENT_URL"
-            echo "pre_production_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.event_name }} == 'push' && ${{ startsWith(github.ref, 'refs/tags/v') }} ]]; then
-            DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-            echo "Production URL: $DEPLOYMENT_URL"
-            echo "production_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-          fi
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel (Preview)
+        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-pre-production:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download CI success artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-success
+      - name: Check CI success
+        run: test -f ci-success.txt
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=pre-production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel (Pre-Production)
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-production:
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download CI success artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-success
+      - name: Check CI success
+        run: test -f ci-success.txt
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel (Production)
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
