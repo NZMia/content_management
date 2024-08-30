@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload CI success artifact
         if: ${{ success() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ci-success
           path: ./ci-success.txt

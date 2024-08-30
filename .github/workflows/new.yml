@@ -76,27 +76,6 @@ jobs:
       - name: Deploy to Vercel (Preview)
         run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
 
-  deploy-pre-production:
-    needs: ci
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' 
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download CI success artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ci-success
-      - name: Check CI success
-        run: test -f ci-success.txt
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=pre-production --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Deploy to Vercel (Pre-Production)
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-
   deploy-production:
     needs: ci
     runs-on: ubuntu-latest
