@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import defaultTheme from 'tailwindcss/defaultTheme';
 
 const config: Config = {
   content: [
@@ -6,10 +7,25 @@ const config: Config = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'class', // or 'media' if you want to use the system preference
   theme: {
+    colors: {
+      primary: '#000000',
+      secondary: '#ffffff',
+      // Include default colors
+      ...defaultTheme.colors,
+      // You can override specific colors here if needed
+      black: '#000000',
+      white: '#ffffff',
+      gray: {
+        100: '#f7fafc',
+        // ... other shades
+        800: '#2d3748',
+        // ... other shades
+      },
+    },
     fontFamily: {
-      sans: ['Graphik', 'sans-serif'],
-      serif: ['Merriweather', 'serif'],
+      sans: ['Inter', ...defaultTheme.fontFamily.sans],
     },
     screens: {
       sm: '640px',
@@ -34,4 +50,5 @@ const config: Config = {
   },
   plugins: [],
 };
+
 export default config;

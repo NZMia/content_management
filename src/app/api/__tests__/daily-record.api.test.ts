@@ -1,7 +1,10 @@
 import { Client } from '@notionhq/client';
 import { NextRequest } from 'next/server';
 
-import { GET, POST, PUT, DELETE } from '../app/api/daily-records/route';
+import { GET, POST, PUT, DELETE } from '../daily-records/route';
+
+const MOCK_BASE_URL = 'http://localhost:9999';
+
 // Mock Notion API client
 jest.mock('@notionhq/client', () => {
   const mockQuery = jest.fn().mockResolvedValue({
@@ -21,6 +24,7 @@ jest.mock('@notionhq/client', () => {
         },
       },
     ],
+    has_more: false,
   });
 
   const mockClient = jest.fn().mockImplementation(() => ({
@@ -35,7 +39,10 @@ jest.mock('@notionhq/client', () => {
             Name: {
               title: [
                 {
-                  plain_text: properties.Name.title[0]?.text.content || '',
+                  type: 'text',
+                  text: {
+                    content: properties.Name.title[0]?.text.content || '',
+                  },
                 },
               ],
             },
@@ -47,18 +54,26 @@ jest.mock('@notionhq/client', () => {
           },
         });
       }),
-      update: jest.fn().mockImplementation(({ page_id, properties }) => {
-        if (page_id === 'invalid-id' || page_id === 'non-existent-id') {
-          throw new Error('Todo not found');
-        }
-        return Promise.resolve({ id: page_id, properties });
-      }),
-      delete: jest.fn().mockImplementation(({ page_id }) => {
-        if (page_id === 'non-existent-id') {
-          throw new Error('Todo not found');
-        }
-        return Promise.resolve({ id: page_id });
-      }),
+      update: jest
+        .fn()
+        .mockImplementation(({ page_id, properties, archived }) => {
+          if (page_id === 'non-existent-id') {
+            throw new Error('Todo not found');
+          }
+          if (archived !== undefined) {
+            return Promise.resolve({
+              id: page_id,
+              archived: archived,
+            });
+          }
+          return Promise.resolve({
+            id: page_id,
+            properties: {
+              Name: properties.Name,
+              Status: properties.Status,
+            },
+          });
+        }),
     },
   }));
 
@@ -69,7 +84,10 @@ jest.mock('@notionhq/client', () => {
 
 // Mock NextResponse
 jest.mock('next/server', () => ({
-  NextRequest: jest.fn(),
+  NextRequest: jest.fn().mockImplementation((url) => ({
+    url: url.startsWith('http') ? url : `${MOCK_BASE_URL}${url}`,
+    // Add other properties as needed
+  })),
   NextResponse: {
     json: jest.fn((data, init) => ({
       json: () => data,
@@ -85,22 +103,28 @@ describe('API /api/daily-records', () => {
 
   describe('GET', () => {
     it('should return a list of todos', async () => {
-      const response = await GET();
+      const mockReq = new NextRequest(
+        `${MOCK_BASE_URL}/api/daily-records?page=1&pageSize=10&completed=false`
+      );
+      const response = await GET(mockReq);
       const jsonResponse = await response.json();
 
       expect(response.status).toBe(200);
-      expect(jsonResponse).toEqual([
-        {
-          id: 'test-id-1',
-          status: 'In Progress',
-          title: 'Test Task 1',
-        },
-        {
-          id: 'test-id-2',
-          status: 'Done',
-          title: 'Test Task 2',
-        },
-      ]);
+      expect(jsonResponse).toEqual({
+        hasMore: false,
+        todos: [
+          {
+            id: 'test-id-1',
+            status: 'In Progress',
+            title: 'Test Task 1',
+          },
+          {
+            id: 'test-id-2',
+            status: 'Done',
+            title: 'Test Task 2',
+          },
+        ],
+      });
     });
 
     it('should handle errors', async () => {
@@ -109,18 +133,43 @@ describe('API /api/daily-records', () => {
       jest.spyOn(global.console, 'error').mockImplementation(() => {});
       jest.mocked(client.databases.query).mockRejectedValueOnce(mockError);
 
-      const response = await GET();
+      const mockReq = new NextRequest(
+        `${MOCK_BASE_URL}/api/daily-records?page=1&pageSize=10&completed=false`
+      );
+      const response = await GET(mockReq);
 
       expect(response.status).toBe(500);
       expect(await response.json()).toEqual({
         error: 'Failed to fetch data from Notion',
       });
     });
+
+    it('should handle empty results', async () => {
+      const client = new Client();
+      jest.mocked(client.databases.query).mockResolvedValueOnce({
+        results: [],
+        type: 'page_or_database',
+        page_or_database: {},
+        object: 'list',
+        next_cursor: null,
+        has_more: false,
+      });
+
+      const mockReq = new NextRequest(
+        `${MOCK_BASE_URL}/api/daily-records?page=1&pageSize=10&completed=false`
+      );
+      const response = await GET(mockReq);
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        hasMore: false,
+        todos: [],
+      });
+    });
   });
 
   describe('POST', () => {
     it('should create a new todo', async () => {
-      // Mock the request body since NextRequest is not properly mocked
       const mockReq = {
         json: async () => ({
           title: 'New Todo',
@@ -138,7 +187,10 @@ describe('API /api/daily-records', () => {
             Name: {
               title: [
                 {
-                  plain_text: 'New Todo',
+                  text: {
+                    content: 'New Todo',
+                  },
+                  type: 'text',
                 },
               ],
             },
@@ -179,6 +231,34 @@ describe('API /api/daily-records', () => {
         json: async () => ({
           title: '',
           status: '',
+        }),
+      };
+      const response = await POST(mockReq as unknown as NextRequest);
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        error: 'Missing required fields',
+      });
+    });
+
+    it('should return 400 if only title is missing', async () => {
+      const mockReq = {
+        json: async () => ({
+          status: 'Not Started',
+        }),
+      };
+      const response = await POST(mockReq as unknown as NextRequest);
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        error: 'Missing required fields',
+      });
+    });
+
+    it('should return 400 if only status is missing', async () => {
+      const mockReq = {
+        json: async () => ({
+          title: 'New Todo',
         }),
       };
       const response = await POST(mockReq as unknown as NextRequest);
@@ -256,6 +336,61 @@ describe('API /api/daily-records', () => {
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({
         error: 'Missing required fields',
+      });
+    });
+
+    it('should update only title if status is not provided', async () => {
+      const mockReq = {
+        json: async () => ({
+          id: 'test-id-1',
+          title: 'Updated Todo',
+        }),
+      };
+      const response = await PUT(mockReq as unknown as NextRequest);
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        message: 'Todo updated successfully',
+        response: {
+          id: 'test-id-1',
+          properties: {
+            Name: {
+              title: [
+                {
+                  type: 'text',
+                  text: {
+                    content: 'Updated Todo',
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+    });
+
+    it('should update only status if title is not provided', async () => {
+      const mockReq = {
+        json: async () => ({
+          id: 'test-id-1',
+          status: 'Done',
+        }),
+      };
+      const response = await PUT(mockReq as unknown as NextRequest);
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        message: 'Todo updated successfully',
+        response: {
+          id: 'test-id-1',
+          properties: {
+            Status: {
+              status: {
+                name: 'Done',
+              },
+            },
+          },
+        },
       });
     });
   });

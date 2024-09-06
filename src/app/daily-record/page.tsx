@@ -1,249 +1,325 @@
-'use client'; // Required for client-side hooks
+'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
+import { handleApiRequest } from '../../utils/api';
 import { ITODO } from '../api/daily-records/route';
+import Tooltip from '../components/Tooltip';
 
-const DailyRecordPage: React.FC = () => {
-  const [todos, setTodos] = useState<ITODO[] | null>(null);
-  const [expandedTodo, setExpandedTodo] = useState<string | null>(null);
+export default function DailyRecord() {
+  const [todos, setTodos] = useState<ITODO[]>([]);
+  const [newTodo, setNewTodo] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState<boolean>(false);
-  const [newTodoTitle, setNewTodoTitle] = useState<string>('');
-  const [currentEdit, setCurrentEdit] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<string | null>(null);
+  const [editedTitle, setEditedTitle] = useState('');
+  const pageSize = 10;
+
+  const fetchTodos = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await handleApiRequest(
+        () =>
+          fetch(
+            `/api/daily-records?page=${page}&pageSize=${pageSize}&completed=${showCompleted}`
+          ),
+        'Failed to fetch todos'
+      );
+      const data = await response.json();
+      setTodos((prevTodos) =>
+        page === 1 ? data.todos : [...prevTodos, ...data.todos]
+      );
+      setHasMore(data.hasMore);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load todos. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, showCompleted, pageSize]);
+
+  const addTodo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTodo.trim()) return;
+
+    try {
+      await handleApiRequest(
+        () =>
+          fetch('/api/daily-records', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: newTodo, status: 'Not started' }),
+          }),
+        'Failed to add todo'
+      );
+      setError(null);
+      await fetchTodos();
+      setNewTodo('');
+    } catch (err) {
+      setError('Failed to add todo. Please try again.');
+    }
+  };
+
+  const updateTodoStatus = async (id: string, newStatus: string) => {
+    await handleApiRequest(
+      () =>
+        fetch('/api/daily-records', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: newStatus }),
+        }),
+      'Failed to update todo'
+    );
+  };
+
+  const deleteTodo = async (id: string) => {
+    await handleApiRequest(
+      () =>
+        fetch('/api/daily-records', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        }),
+      'Failed to delete todo'
+    );
+  };
 
   useEffect(() => {
-    async function fetchPageData() {
-      try {
-        const response = await fetch('/api/daily-records');
-        if (!response.ok) {
-          throw new Error('Failed to fetch page data');
-        }
-        const data = await response.json();
-        setTodos(data);
-      } catch (error) {
-        console.error('Error fetching page data:', error);
-        setError('Failed to fetch page data');
-      }
-    }
+    fetchTodos();
+  }, [fetchTodos]);
 
-    fetchPageData();
-  }, []);
-
-  const handleAddTodoClick = () => {
-    setIsAdding(true);
-    setExpandedTodo(null);
+  const startEditing = (todo: ITODO) => {
+    setEditingTodo(todo.id);
+    setEditedTitle(todo.title);
   };
 
-  const handleAddTodoSubmit = async () => {
-    if (!newTodoTitle) {
-      alert('Please enter a title for the new todo');
-      return;
-    }
+  const cancelEditing = () => {
+    setEditingTodo(null);
+    setEditedTitle('');
+  };
 
-    const newTodo = {
-      title: newTodoTitle,
-      status: 'In progress',
-    };
+  const saveEditedTodo = async (id: string) => {
+    await handleApiRequest(
+      () =>
+        fetch('/api/daily-records', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, title: editedTitle }),
+        }),
+      'Failed to update todo'
+    );
+    setEditingTodo(null);
+  };
 
-    try {
-      const response = await fetch('/api/daily-records', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newTodo),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setTodos((prevTodos) =>
-          prevTodos
-            ? [...prevTodos, { id: data.newTodo.id, ...newTodo }]
-            : [{ id: data.newTodo.id, ...newTodo }]
-        );
-        setNewTodoTitle('');
-        setIsAdding(false);
-        alert('Todo created successfully!');
-      } else {
-        alert(`Failed to create todo: ${data.error}`);
-      }
-    } catch (error) {
-      console.error('Error:', error);
+  const loadMore = () => {
+    if (!isLoading && hasMore) {
+      setPage((prevPage) => prevPage + 1);
     }
   };
 
-  const handleSaveEdit = async () => {
-    if (!currentEdit) return;
-
-    const { id, title } = currentEdit;
-
-    try {
-      const response = await fetch('/api/daily-records', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id, title }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setTodos(
-          (prevTodos) =>
-            prevTodos?.map((todo) =>
-              todo.id === id ? { ...todo, title } : todo
-            ) || null
-        );
-        setCurrentEdit(null);
-        alert('Todo updated successfully!');
-      } else {
-        alert(`Failed to update todo: ${data.error}`);
-      }
-    } catch (error) {
-      console.error('Error updating todo:', error);
-    }
+  const toggleShowCompleted = () => {
+    setShowCompleted((prev) => !prev);
+    setPage(1);
+    setTodos([]);
   };
-
-  const handleDeleteTodo = async (id: string) => {
-    try {
-      const response = await fetch('/api/daily-records', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setTodos(
-          (prevTodos) => prevTodos?.filter((todo) => todo.id !== id) || null
-        );
-        alert('Todo deleted successfully!');
-      } else {
-        alert(`Failed to delete todo: ${data.error}`);
-      }
-    } catch (error) {
-      console.error('Error deleting todo:', error);
-    }
-  };
-
-  const handleExpandTodo = (id: string) => {
-    setExpandedTodo(expandedTodo === id ? null : id);
-    const todo = todos?.find((todo) => todo.id === id);
-    if (todo) {
-      setCurrentEdit({ id: todo.id, title: todo.title });
-    }
-  };
-
-  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="w-full">
-      <h1>Notion Page Data</h1>
-      {todos ? (
-        <div className="mx-auto max-w-lg rounded-lg bg-gray-800 p-4 text-white">
-          <h1 className="mb-4 flex items-center text-xl font-bold">
-            <span className="mr-2 text-yellow-400">⭐</span> Todos
-          </h1>
-          <div className="space-y-4">
-            {todos.map((todo) => (
-              <div
-                key={todo.id}
-                className={`rounded-lg bg-gray-700 p-4 ${expandedTodo === todo.id ? 'block' : 'flex items-center justify-between'}`}
-              >
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="form-checkbox h-5 w-5 text-blue-600"
-                    checked={todo.status === 'Done'}
-                    onChange={() => handleSaveEdit()}
-                  />
-                  {expandedTodo === todo.id ? (
-                    <div className="ml-2 flex-grow">
-                      <input
-                        type="text"
-                        placeholder="New todo..."
-                        className="w-full rounded-md bg-gray-600 p-2 outline-none"
-                        value={currentEdit?.title || ''}
-                        onChange={(e) =>
-                          setCurrentEdit((prev) =>
-                            prev ? { ...prev, title: e.target.value } : prev
-                          )
-                        }
-                      />
-                      <textarea
-                        placeholder="Notes"
-                        className="mt-2 w-full resize-none rounded-md bg-gray-600 p-2 outline-none"
-                        rows={4}
-                        // Assuming the content/notes are part of the todo object, you would handle them similarly
-                      ></textarea>
-                      <button
-                        className="mt-2 text-green-400 hover:text-green-600"
-                        onClick={handleSaveEdit}
-                      >
-                        Save
-                      </button>
-                    </div>
-                  ) : (
-                    <span
-                      className="ml-2 cursor-pointer"
-                      onClick={() => handleExpandTodo(todo.id)}
-                    >
-                      {todo.title || 'New todo...'}
-                    </span>
-                  )}
-                </div>
-                {expandedTodo === todo.id && (
-                  <button
-                    className="mt-2 text-red-400 hover:text-red-600"
-                    onClick={() => handleDeleteTodo(todo.id)}
-                  >
-                    <p className="h-5 w-5">delete</p>
-                  </button>
-                )}
-              </div>
-            ))}
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      <h1 className="mb-6 text-3xl font-bold text-black dark:text-white">
+        Daily Record
+      </h1>
 
-            {isAdding && (
-              <div className="block rounded-lg bg-gray-700 p-4">
-                <div className="flex items-center">
-                  <input
-                    type="text"
-                    placeholder="Enter new todo title..."
-                    className="w-full rounded-md bg-gray-600 p-2 outline-none"
-                    value={newTodoTitle}
-                    onChange={(e) => setNewTodoTitle(e.target.value)}
-                  />
-                </div>
-                <button
-                  className="mt-2 text-green-400 hover:text-green-600"
-                  onClick={handleAddTodoSubmit}
-                >
-                  Add Todo
-                </button>
-              </div>
-            )}
-          </div>
-
-          {!isAdding && (
-            <button
-              className="mt-4 flex items-center justify-center rounded-full bg-gray-700 p-2 text-white hover:bg-gray-600"
-              onClick={handleAddTodoClick}
-            >
-              <p className="h-6 w-6">Add Todo</p>
-            </button>
-          )}
+      {error && (
+        <div
+          className="border-red-400 bg-red-100 text-red-700 relative mb-4 rounded border px-4 py-3"
+          role="alert"
+        >
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
         </div>
-      ) : (
-        <div>Loading...</div>
+      )}
+
+      <form onSubmit={addTodo} className="mb-8 flex flex-col sm:flex-row">
+        <input
+          type="text"
+          value={newTodo}
+          onChange={(e) => setNewTodo(e.target.value)}
+          placeholder="Add a new daily record"
+          className="border-gray-300 dark:border-gray-600 flex-grow rounded-md border p-2 dark:bg-gray-800 dark:text-white sm:rounded-r-none"
+        />
+        <button
+          type="submit"
+          className="btn-primary mt-2 sm:mt-0 sm:rounded-l-none"
+        >
+          Add Daily Record
+        </button>
+      </form>
+
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-black dark:text-white">
+          {showCompleted ? 'Completed Todos' : 'Active Todos'}
+        </h2>
+        <button onClick={toggleShowCompleted} className="btn-secondary">
+          {showCompleted ? 'Show Active' : 'Show Completed'}
+        </button>
+      </div>
+
+      <div className="mb-8 space-y-4">
+        {todos.map((todo) => (
+          <div
+            key={todo.id}
+            className="border-gray-200 dark:border-gray-700 flex items-center justify-between rounded-lg border bg-white p-4 shadow-sm dark:bg-black"
+          >
+            {editingTodo === todo.id ? (
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="border-gray-300 dark:border-gray-600 mr-2 flex-grow rounded-md border p-1 dark:bg-gray-800 dark:text-white"
+              />
+            ) : (
+              <span className="mr-2 flex-grow text-black dark:text-white">
+                {todo.title}
+              </span>
+            )}
+            <div className="flex items-center">
+              {!showCompleted && (
+                <select
+                  value={todo.status}
+                  onChange={(e) => updateTodoStatus(todo.id, e.target.value)}
+                  className="border-gray-300 dark:border-gray-600 mr-2 rounded-md border p-1 dark:bg-gray-800 dark:text-white"
+                >
+                  <option value="Not started">Not started</option>
+                  <option value="In progress">In progress</option>
+                  <option value="Done">Completed</option>
+                </select>
+              )}
+              {editingTodo === todo.id ? (
+                <>
+                  <Tooltip text="Save changes">
+                    <button
+                      onClick={() => saveEditedTodo(todo.id)}
+                      className="hover:text-gray-600 dark:hover:text-gray-300 mr-2 p-1 text-black dark:text-white"
+                      aria-label="Save todo"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Cancel editing">
+                    <button
+                      onClick={cancelEditing}
+                      className="hover:text-gray-600 dark:hover:text-gray-300 mr-2 p-1 text-black dark:text-white"
+                      aria-label="Cancel editing"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </Tooltip>
+                </>
+              ) : (
+                <Tooltip text="Edit todo">
+                  <button
+                    onClick={() => startEditing(todo)}
+                    className="hover:text-gray-600 dark:hover:text-gray-300 mr-2 p-1 text-black dark:text-white"
+                    aria-label="Edit todo"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  </button>
+                </Tooltip>
+              )}
+              <Tooltip text="Delete todo">
+                <button
+                  onClick={() => deleteTodo(todo.id)}
+                  className="hover:text-gray-600 dark:hover:text-gray-300 p-1 text-black dark:text-white"
+                  aria-label="Delete todo"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </Tooltip>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {isLoading && (
+        <div className="mt-4 text-center" data-testid="loading-indicator">
+          Loading...
+        </div>
+      )}
+
+      {hasMore && !isLoading && (
+        <button onClick={loadMore} className="btn-secondary mt-4 w-full">
+          Load More
+        </button>
+      )}
+
+      {!hasMore && todos.length > 0 && (
+        <p className="text-gray-600 dark:text-gray-400 mt-4 text-center">
+          No more todos to load.
+        </p>
+      )}
+
+      {!isLoading && todos.length === 0 && (
+        <p className="text-gray-600 dark:text-gray-400 mt-4 text-center">
+          {showCompleted
+            ? 'No completed todos found.'
+            : 'No active todos found. Add a new todo to get started!'}
+        </p>
       )}
     </div>
   );
-};
-
-export default DailyRecordPage;
+}
