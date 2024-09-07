@@ -25,9 +25,10 @@
   "include": [
     "next-env.d.ts", 
     "**/*.ts",
-     "**/*.tsx",
+    "**/*.tsx",
     ".next/types/**/*.ts",
-     "src/__tests__/api.test.js",  
-     "jest.setup.ts"],
+    "jest.setup.ts",
+    "tailwind.config.ts"
+, "src/app/daily-record/__test__/daily-record.page.test.ts"  ],
   "exclude": ["node_modules"]
 }
