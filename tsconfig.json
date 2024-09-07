@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     "jest.setup.ts",
     "tailwind.config.ts"
-  ],
+, "src/app/daily-record/__test__/daily-record.page.test.ts"  ],
   "exclude": ["node_modules"]
 }

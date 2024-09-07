@@ -7,7 +7,7 @@ export default function Home() {
         <h1 className="mb-4 text-4xl font-bold text-black dark:text-white">
           Hi, I'm <span className="text-gray-700 dark:text-gray-300">Mia</span>
         </h1>
-        <p className="text-gray-700 dark:text-gray-300 mx-auto mb-8 max-w-2xl text-lg">
+        <p className="mx-auto mb-8 max-w-2xl text-lg text-gray-700 dark:text-gray-300">
           A passionate full-stack developer crafting innovative digital
           experiences with cutting-edge technologies.
         </p>
@@ -25,7 +25,7 @@ export default function Home() {
         <h2 className="mb-4 text-2xl font-bold text-black dark:text-white">
           Let's build something great together
         </h2>
-        <p className="text-gray-700 dark:text-gray-300 mb-4">
+        <p className="mb-4 text-gray-700 dark:text-gray-300">
           With a passion for clean code and user-centric design, I bring ideas
           to life through innovative web solutions. My expertise spans across
           front-end and back-end technologies, ensuring seamless and efficient
@@ -40,7 +40,7 @@ export default function Home() {
         <h2 className="mb-4 text-2xl font-bold text-black dark:text-white">
           Tech Stack
         </h2>
-        <p className="text-gray-700 dark:text-gray-300 mb-6">
+        <p className="mb-6 text-gray-700 dark:text-gray-300">
           Here are the core technologies I work with:
         </p>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">

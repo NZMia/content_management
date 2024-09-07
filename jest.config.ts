@@ -16,6 +16,10 @@ const config: Config = {
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },
+  testMatch: [
+    '**/__tests__/**/*.test.[jt]s?(x)',
+    '**/?(*.)+(spec|test).[jt]s?(x)',
+  ],
   collectCoverage: true,
   coverageDirectory: '<rootDir>/coverage',
   coverageReporters: ['lcov', 'text', 'html'],

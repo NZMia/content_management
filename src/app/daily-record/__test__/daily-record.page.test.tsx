@@ -1,5 +1,6 @@
 import React from 'react';
 
+import '@testing-library/jest-dom';
 import {
   render,
   screen,
@@ -9,511 +10,487 @@ import {
 } from '@testing-library/react';
 
 import DailyRecord from '../page';
+import { handleApiRequest } from '@/utils/api';
 
-// Mock the fetch function
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+jest.mock('@/utils/api', () => ({
+  handleApiRequest: jest.fn(),
+}));
 
-describe('DailyRecord', () => {
+describe('DailyRecord Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ todos: [], hasMore: false }),
-    });
+    jest.resetAllMocks();
+    (handleApiRequest as jest.Mock).mockClear();
   });
 
-  it('renders correctly', async () => {
-    render(<DailyRecord />);
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders the component and fetches todos', async () => {
+    const mockTodos = [
+      { id: '1', title: 'Test Todo 1', status: 'Not started' },
+      { id: '2', title: 'Test Todo 2', status: 'In progress' },
+    ];
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: mockTodos,
+      hasMore: false,
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
     expect(screen.getByText('Daily Record')).toBeInTheDocument();
+    expect(screen.getByText('Test Todo 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Todo 2')).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText('Add a new daily record')
     ).toBeInTheDocument();
     expect(screen.getByText('Add Daily Record')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByText('Active Todos')).toBeInTheDocument()
-    );
+
+    expect(handleApiRequest).toHaveBeenCalledWith({
+      url: '/api/daily-records',
+      method: 'GET',
+      params: { page: '1', pageSize: '10', completed: 'false' },
+      errorMessage: 'Failed to fetch todos',
+    });
   });
 
   it('adds a new todo', async () => {
-    render(<DailyRecord />);
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: [], hasMore: false })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({
+        todos: [{ id: '1', title: 'New Todo', status: 'Not started' }],
+        hasMore: false,
+      });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
     const input = screen.getByPlaceholderText('Add a new daily record');
     const addButton = screen.getByText('Add Daily Record');
 
-    fireEvent.change(input, { target: { value: 'New Todo' } });
-    fireEvent.click(addButton);
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'New Todo' } });
+      fireEvent.click(addButton);
+    });
 
-    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2)); // Once for initial load, once for adding
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/daily-records',
-      expect.any(Object)
-    );
+    expect(handleApiRequest).toHaveBeenCalledWith({
+      url: '/api/daily-records',
+      method: 'POST',
+      data: { title: 'New Todo', status: 'Not started' },
+      errorMessage: 'Failed to add todo',
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('New Todo')).toBeInTheDocument();
+    });
   });
 
   it('toggles between active and completed todos', async () => {
     const activeTodos = [
-      { id: '1', title: 'Active Todo 1', status: 'In progress' },
-      { id: '2', title: 'Active Todo 2', status: 'Not started' },
+      { id: '1', title: 'Active Todo', status: 'In progress' },
     ];
     const completedTodos = [
-      { id: '3', title: 'Completed Todo 1', status: 'Done' },
-      { id: '4', title: 'Completed Todo 2', status: 'Done' },
+      { id: '2', title: 'Completed Todo', status: 'Done' },
     ];
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ todos: activeTodos, hasMore: false }),
-    });
-
-    render(<DailyRecord />);
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/daily-records?page=1&pageSize=10&completed=false'
-      );
-      expect(screen.getByText('Active Todos')).toBeInTheDocument();
-      activeTodos.forEach((todo) => {
-        expect(screen.getByText(todo.title)).toBeInTheDocument();
-      });
-    });
-
-    const statusSelects = screen.getAllByRole('combobox');
-    expect(statusSelects).toHaveLength(activeTodos.length);
-    expect(statusSelects[0]).toHaveValue('In progress');
-    expect(statusSelects[1]).toHaveValue('Not started');
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ todos: completedTodos, hasMore: false }),
-    });
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: activeTodos, hasMore: false })
+      .mockResolvedValueOnce({ todos: completedTodos, hasMore: false });
 
     await act(async () => {
-      fireEvent.click(screen.getByText('Show Completed'));
+      render(<DailyRecord />);
+    });
+
+    expect(screen.getByText('Active Todo')).toBeInTheDocument();
+
+    const toggleButton = screen.getByText('Show Completed');
+    expect(toggleButton).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(toggleButton);
     });
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/daily-records?page=1&pageSize=10&completed=true'
-      );
-      expect(screen.getByText('Completed Todos')).toBeInTheDocument();
-      completedTodos.forEach((todo) => {
-        expect(screen.getByText(todo.title)).toBeInTheDocument();
-      });
+      expect(screen.getByText('Completed Todo')).toBeInTheDocument();
+      expect(screen.queryByText('Active Todo')).not.toBeInTheDocument();
     });
 
-    expect(screen.queryAllByRole('combobox')).toHaveLength(0);
+    expect(handleApiRequest).toHaveBeenCalledWith({
+      url: '/api/daily-records',
+      method: 'GET',
+      params: { page: '1', pageSize: '10', completed: 'true' },
+      errorMessage: 'Failed to fetch todos',
+    });
   });
 
   it('updates todo status', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-          hasMore: false,
-        }),
+    const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: [mockTodo], hasMore: false })
+      .mockResolvedValueOnce({});
+
+    await act(async () => {
+      render(<DailyRecord />);
     });
 
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
-
     const statusSelect = screen.getByRole('combobox');
-    fireEvent.change(statusSelect, { target: { value: 'In progress' } });
+    await act(async () => {
+      fireEvent.change(statusSelect, { target: { value: 'In progress' } });
+    });
 
-    await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/daily-records',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ id: '1', status: 'In progress' }),
-        })
-      )
-    );
+    expect(handleApiRequest).toHaveBeenCalledWith({
+      url: '/api/daily-records',
+      method: 'PUT',
+      data: { id: '1', status: 'In progress' },
+      errorMessage: 'Failed to update todo status',
+    });
   });
 
   it('deletes a todo', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-          hasMore: false,
-        }),
+    const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: [mockTodo], hasMore: false })
+      .mockResolvedValueOnce({});
+
+    await act(async () => {
+      render(<DailyRecord />);
     });
 
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
-
-    const deleteButton = screen.getByLabelText('Delete todo');
-    fireEvent.click(deleteButton);
-
-    await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/daily-records',
-        expect.objectContaining({
-          method: 'DELETE',
-          body: JSON.stringify({ id: '1' }),
-        })
-      )
-    );
-  });
-
-  it('edits a todo', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-          hasMore: false,
-        }),
+    const deleteButton = await screen.findByLabelText('Delete todo');
+    await act(async () => {
+      fireEvent.click(deleteButton);
     });
 
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
-
-    const editButton = screen.getByLabelText('Edit todo');
-    fireEvent.click(editButton);
-
-    const editInput = screen.getByDisplayValue('Test Todo');
-    fireEvent.change(editInput, { target: { value: 'Edited Todo' } });
-
-    const saveButton = screen.getByLabelText('Save todo');
-    fireEvent.click(saveButton);
-
-    await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/daily-records',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ id: '1', title: 'Edited Todo' }),
-        })
-      )
-    );
-  });
-
-  it('cancels editing a todo', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-          hasMore: false,
-        }),
+    expect(handleApiRequest).toHaveBeenCalledWith({
+      url: '/api/daily-records',
+      method: 'DELETE',
+      data: { id: '1' },
+      errorMessage: 'Failed to delete todo',
     });
-
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
-
-    const editButton = screen.getByLabelText('Edit todo');
-    fireEvent.click(editButton);
-
-    const editInput = screen.getByDisplayValue('Test Todo');
-    fireEvent.change(editInput, { target: { value: 'Edited Todo' } });
-
-    const cancelButton = screen.getByLabelText('Cancel editing');
-    fireEvent.click(cancelButton);
-
-    expect(screen.getByText('Test Todo')).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('Edited Todo')).not.toBeInTheDocument();
-  });
-
-  it('loads more todos', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-          hasMore: true,
-        }),
-    });
-
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
-
-    const loadMoreButton = screen.getByText('Load More');
-    fireEvent.click(loadMoreButton);
-
-    await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith(
-        '/api/daily-records?page=2&pageSize=10&completed=false'
-      )
-    );
   });
 
   it('handles errors when fetching todos', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'));
-
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(
-        screen.getByText('Failed to load todos. Please try again later.')
-      ).toBeInTheDocument()
+    (handleApiRequest as jest.Mock).mockRejectedValueOnce(
+      new Error('Failed to fetch todos')
     );
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    expect(
+      await screen.findByText('Failed to fetch todos')
+    ).toBeInTheDocument();
   });
 
   it('handles errors when adding a todo', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ todos: [], hasMore: false }),
-      })
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: [], hasMore: false })
       .mockRejectedValueOnce(new Error('Failed to add todo'));
 
-    render(<DailyRecord />);
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
     const input = screen.getByPlaceholderText('Add a new daily record');
     const addButton = screen.getByText('Add Daily Record');
 
-    fireEvent.change(input, { target: { value: 'New Todo' } });
-    fireEvent.click(addButton);
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'New Todo' } });
+      fireEvent.click(addButton);
+    });
+
+    expect(await screen.findByText('Failed to add todo')).toBeInTheDocument();
+  });
+
+  it('loads more todos when available', async () => {
+    const initialTodos = [
+      { id: '1', title: 'Initial Todo', status: 'Not started' },
+    ];
+    const moreTodos = [{ id: '2', title: 'More Todo', status: 'In progress' }];
+
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: initialTodos, hasMore: true })
+      .mockResolvedValueOnce({ todos: moreTodos, hasMore: false });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    expect(screen.getByText('Initial Todo')).toBeInTheDocument();
+
+    const loadMoreButton = screen.getByText('Load More');
+    await act(async () => {
+      fireEvent.click(loadMoreButton);
+    });
 
     await waitFor(() => {
-      expect(
-        screen.queryByText('Failed to add todo. Please try again.')
-      ).not.toBeInTheDocument();
-      expect(input).toHaveValue('New Todo');
-      expect(
-        screen.getByText(
-          'No active todos found. Add a new todo to get started!'
-        )
-      ).toBeInTheDocument();
+      expect(screen.getByText('More Todo')).toBeInTheDocument();
+      expect(screen.queryByText('Load More')).not.toBeInTheDocument();
+    });
+
+    expect(handleApiRequest).toHaveBeenCalledWith({
+      url: '/api/daily-records',
+      method: 'GET',
+      params: { page: '2', pageSize: '10', completed: 'false' },
+      errorMessage: 'Failed to fetch todos',
     });
   });
 
-  it('handles errors when updating todo status', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-            hasMore: false,
-          }),
-      })
-      .mockRejectedValueOnce(new Error('Failed to update todo'));
+  it('cancels editing a todo', async () => {
+    const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [mockTodo],
+      hasMore: false,
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    const editButton = await screen.findByLabelText('Edit todo');
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+
+    const cancelButton = screen.getByLabelText('Cancel editing');
+    await act(async () => {
+      fireEvent.click(cancelButton);
+    });
+
+    expect(screen.queryByDisplayValue('Test Todo')).not.toBeInTheDocument();
+    expect(screen.getByText('Test Todo')).toBeInTheDocument();
+  });
+
+  it('saves edited todo', async () => {
+    const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: [mockTodo], hasMore: false })
+      .mockResolvedValueOnce({});
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    const editButton = await screen.findByLabelText('Edit todo');
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+
+    const editInput = screen.getByDisplayValue('Test Todo');
+    await act(async () => {
+      fireEvent.change(editInput, { target: { value: 'Edited Todo' } });
+    });
+
+    const saveButton = screen.getByLabelText('Save todo');
+    await act(async () => {
+      fireEvent.click(saveButton);
+    });
+
+    expect(handleApiRequest).toHaveBeenCalledWith({
+      url: '/api/daily-records',
+      method: 'PUT',
+      data: { id: '1', title: 'Edited Todo' },
+      errorMessage: 'Failed to update todo',
+    });
+  });
+
+  it('displays loading indicator', async () => {
+    (handleApiRequest as jest.Mock).mockImplementationOnce(
+      () => new Promise(() => {})
+    );
 
     render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
+
+    expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
+  });
+
+  it('displays no todos message for active todos', async () => {
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [],
+      hasMore: false,
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    expect(
+      screen.getByText('No active todos found. Add a new todo to get started!')
+    ).toBeInTheDocument();
+  });
+
+  it('displays no todos message for completed todos', async () => {
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [],
+      hasMore: false,
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    const toggleButton = screen.getByText('Show Completed');
+    await act(async () => {
+      fireEvent.click(toggleButton);
+    });
+
+    // Mock the API call that happens after toggling
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [],
+      hasMore: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('No completed todos found.')).toBeInTheDocument();
+    });
+  });
+
+  it('disables add button when input is empty', async () => {
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [],
+      hasMore: false,
+    });
+
+    render(<DailyRecord />);
+
+    const addButton = screen.getByText('Add Daily Record');
+    expect(addButton).toBeDisabled();
+
+    const input = screen.getByPlaceholderText('Add a new daily record');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'New Todo' } });
+    });
+
+    expect(addButton).not.toBeDisabled();
+  });
+
+  it('handles error when updating todo status', async () => {
+    const mockTodo = [{ id: '1', title: 'Test Todo', status: 'Not started' }];
+    (handleApiRequest as jest.Mock).mockImplementation((options) => {
+      if (options.method === 'GET') {
+        return Promise.resolve({ todos: mockTodo, hasMore: false });
+      }
+      if (options.method === 'PUT') {
+        return Promise.reject(new Error('Failed to update todo status'));
+      }
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Todo')).toBeInTheDocument();
+    });
 
     const statusSelect = screen.getByRole('combobox');
-    fireEvent.change(statusSelect, { target: { value: 'In progress' } });
+    await act(async () => {
+      fireEvent.change(statusSelect, { target: { value: 'In progress' } });
+    });
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(
-        screen.getByText('Failed to update todo. Please try again.')
-      ).toBeInTheDocument()
-    );
+        screen.getByText('Failed to update todo status')
+      ).toBeInTheDocument();
+    });
+
+    // 验证状态没有更新
+    expect(statusSelect).toHaveValue('Not started');
   });
 
-  it('handles errors when deleting a todo', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-            hasMore: false,
-          }),
-      })
+  it('handles error when deleting todo', async () => {
+    const mockTodo = {
+      id: '2',
+      title: 'Todo to Delete',
+      status: 'In progress',
+    };
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: [mockTodo], hasMore: false })
       .mockRejectedValueOnce(new Error('Failed to delete todo'));
 
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
+    await act(async () => {
+      render(<DailyRecord />);
+    });
 
-    const deleteButton = screen.getByLabelText('Delete todo');
-    fireEvent.click(deleteButton);
+    const deleteButton = await screen.findByLabelText('Delete todo');
+    await waitFor(() => {
+      expect(screen.getByText('Todo to Delete')).toBeInTheDocument();
+    });
+    await act(async () => {
+      fireEvent.click(deleteButton);
+    });
 
-    await waitFor(() =>
-      expect(
-        screen.getByText('Failed to delete todo. Please try again.')
-      ).toBeInTheDocument()
-    );
+    expect(
+      await screen.findByText('Failed to delete todo')
+    ).toBeInTheDocument();
   });
 
-  it('handles errors when editing a todo', async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-            hasMore: false,
-          }),
-      })
+  it('handles error when saving edited todo', async () => {
+    const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
+    (handleApiRequest as jest.Mock)
+      .mockResolvedValueOnce({ todos: [mockTodo], hasMore: false })
       .mockRejectedValueOnce(new Error('Failed to update todo'));
 
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('Test Todo')).toBeInTheDocument()
-    );
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    const editButton = await screen.findByLabelText('Edit todo');
+    await act(async () => {
+      fireEvent.click(editButton);
+    });
+
+    const saveButton = screen.getByLabelText('Save todo');
+    await act(async () => {
+      fireEvent.click(saveButton);
+    });
+
+    expect(
+      await screen.findByText('Failed to update todo')
+    ).toBeInTheDocument();
+  });
+  it('renders edit mode for a todo', async () => {
+    const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [mockTodo],
+      hasMore: false,
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
 
     const editButton = screen.getByLabelText('Edit todo');
     fireEvent.click(editButton);
 
-    const editInput = screen.getByDisplayValue('Test Todo');
-    fireEvent.change(editInput, { target: { value: 'Edited Todo' } });
-
-    const saveButton = screen.getByLabelText('Save todo');
-    fireEvent.click(saveButton);
-
-    await waitFor(() =>
-      expect(
-        screen.getByText('Failed to update todo. Please try again.')
-      ).toBeInTheDocument()
-    );
+    expect(screen.getByDisplayValue('Test Todo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Save todo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Cancel editing')).toBeInTheDocument();
   });
-
-  it('displays no todos message when there are no todos', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ todos: [], hasMore: false }),
+  it('renders "No more todos to load" message', async () => {
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
+      hasMore: false,
     });
 
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          'No active todos found. Add a new todo to get started!'
-        )
-      ).toBeInTheDocument()
-    );
-  });
-
-  it('displays no completed todos message when there are no completed todos', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ todos: [], hasMore: false }),
-    });
-
-    render(<DailyRecord />);
     await act(async () => {
-      fireEvent.click(screen.getByText('Show Completed'));
+      render(<DailyRecord />);
     });
 
-    await waitFor(() =>
-      expect(screen.getByText('No completed todos found.')).toBeInTheDocument()
-    );
+    expect(screen.getByText('No more todos to load.')).toBeInTheDocument();
   });
 
-  it('displays loading message when fetching todos', async () => {
-    mockFetch.mockImplementationOnce(
-      () =>
-        new Promise((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                ok: true,
-                json: () => Promise.resolve({ todos: [], hasMore: false }),
-              }),
-            100
-          )
-        )
+  it('renders loading indicator', async () => {
+    (handleApiRequest as jest.Mock).mockImplementationOnce(
+      () => new Promise(() => {})
     );
 
     render(<DailyRecord />);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
-    );
-  });
 
-  it('displays no more todos message when all todos are loaded', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
-          hasMore: false,
-        }),
-    });
-
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(screen.getByText('No more todos to load.')).toBeInTheDocument()
-    );
-  });
-
-  it('handles non-ok response when fetching todos', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-    });
-
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(
-        screen.getByText('Failed to load todos. Please try again later.')
-      ).toBeInTheDocument()
-    );
-  });
-
-  it('clears error message after successful action', async () => {
-    mockFetch
-      .mockRejectedValueOnce(new Error('Failed to fetch'))
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ todos: [], hasMore: false }),
-      });
-
-    render(<DailyRecord />);
-    await waitFor(() =>
-      expect(
-        screen.getByText('Failed to load todos. Please try again later.')
-      ).toBeInTheDocument()
-    );
-
-    const input = screen.getByPlaceholderText('Add a new daily record');
-    const addButton = screen.getByText('Add Daily Record');
-
-    fireEvent.change(input, { target: { value: 'New Todo' } });
-    fireEvent.click(addButton);
-
-    await waitFor(() => {
-      // Check that the error message is no longer present
-      const errorMessage = screen.queryByText(
-        'Failed to load todos. Please try again later.'
-      );
-      expect(errorMessage).toBeNull();
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    });
-  });
-
-  it('handles empty input when adding a todo', async () => {
-    render(<DailyRecord />);
-    const addButton = screen.getByText('Add Daily Record');
-
-    fireEvent.click(addButton);
-
-    // Wait for a short time to ensure any potential state updates have occurred
-    await waitFor(() => {});
-
-    // Check that no fetch call was made
-    expect(mockFetch).not.toHaveBeenCalledWith(
-      '/api/daily-records',
-      expect.any(Object)
-    );
-
-    // Verify that the input field is still empty
-    const input = screen.getByPlaceholderText('Add a new daily record');
-    expect(input).toHaveValue('');
-
-    // Optionally, check that no error message is displayed
-    expect(
-      screen.queryByText('Failed to add todo. Please try again.')
-    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
   });
 });

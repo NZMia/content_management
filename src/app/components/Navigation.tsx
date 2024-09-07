@@ -36,7 +36,7 @@ export default function Navigation() {
                     className={`rounded-md px-3 py-2 text-sm font-medium ${
                       pathname === item.href
                         ? 'bg-black text-white dark:bg-white dark:text-black'
-                        : 'hover:bg-gray-200 text-black dark:text-white dark:hover:bg-gray-800'
+                        : 'text-black hover:bg-gray-200 dark:text-white dark:hover:bg-gray-800'
                     } transition duration-150 ease-in-out`}
                   >
                     {item.name}
@@ -51,7 +51,7 @@ export default function Navigation() {
           <div className="-mr-2 flex md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="hover:bg-gray-200 inline-flex items-center justify-center rounded-md p-2 text-black focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white dark:text-white dark:hover:bg-gray-800"
+              className="inline-flex items-center justify-center rounded-md p-2 text-black hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white dark:text-white dark:hover:bg-gray-800"
               aria-label="Toggle menu"
             >
               <span className="sr-only">Open main menu</span>
@@ -103,14 +103,14 @@ export default function Navigation() {
                 className={`block rounded-md px-3 py-2 text-base font-medium ${
                   pathname === item.href
                     ? 'bg-black text-white dark:bg-white dark:text-black'
-                    : 'hover:bg-gray-200 text-black dark:text-white dark:hover:bg-gray-800'
+                    : 'text-black hover:bg-gray-200 dark:text-white dark:hover:bg-gray-800'
                 } transition duration-150 ease-in-out`}
               >
                 {item.name}
               </Link>
             ))}
           </div>
-          <div className="border-gray-700 border-t pb-3 pt-4">
+          <div className="border-t border-gray-700 pb-3 pt-4">
             <div className="flex items-center px-5">
               <ThemeToggle />
             </div>

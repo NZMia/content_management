@@ -23,7 +23,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggleTheme}
       aria-label="Toggle theme"
-      className={`text-gray-600 dark:text-gray-300 rounded-md px-3 py-2 text-sm font-medium hover:text-black dark:hover:text-white ${
+      className={`rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:text-black dark:text-gray-300 dark:hover:text-white ${
         isDarkMode ? 'bg-white' : 'bg-black'
       }`}
     >

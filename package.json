@@ -12,7 +12,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "prepare": "husky && husky install",
-    "build:css": "ts-node --transpile-only tailwind.config.ts"
+    "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css --config ./tailwind.config.ts"
   },
   "dependencies": {
     "@notionhq/client": "^2.2.15",
