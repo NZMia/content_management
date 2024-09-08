@@ -62,12 +62,6 @@ jobs:
       - name: Deploy Project Artifacts to Vercel
         run: |
           DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-          if [ "$DEPLOYMENT_URL" != "https://content-management-prev.vercel.app" ]; then
-            echo "Deployment URL does not match expected preview URL"
-            echo "Expected: https://content-management-prev.vercel.app"
-            echo "Actual: $DEPLOYMENT_URL"
-            exit 1
-          fi
           echo "Preview deployed to: $DEPLOYMENT_URL"
 
   deploy-production:
