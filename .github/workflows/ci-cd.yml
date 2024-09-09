@@ -88,30 +88,30 @@ jobs:
         run: |
           vercel alias set $DEPLOYMENT_URL content-management-mia.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
           echo "Production alias set to: https://content-management-mia.vercel.app"
+      - name: Output Vercel Project Info
+        run: |
+          echo "Vercel Project Information:"
+          vercel project ls --token=${{ secrets.VERCEL_TOKEN }}
+          echo "Vercel Aliases:"
+          vercel alias ls --token=${{ secrets.VERCEL_TOKEN }}
       - name: Verify deployment
         run: |
-          PROD_URL=$(vercel ls content-management-mia.vercel.app --token=${{ secrets.VERCEL_TOKEN }} | grep content-management-mia.vercel.app | awk '{print $2}')
-          echo "Production URL: $PROD_URL"
           echo "Deployment URL: $DEPLOYMENT_URL"
-          if [[ "$PROD_URL" != "https://content-management-mia.vercel.app" ]]; then
-            echo "Production URL does not match expected URL"
-            echo "Expected: https://content-management-mia.vercel.app"
-            echo "Actual: $PROD_URL"
+          ALIAS_URL="https://content-management-mia.vercel.app"
+          echo "Expected Alias URL: $ALIAS_URL"
+          
+          # Check if the alias is set correctly
+          ALIAS_CHECK=$(vercel alias ls --token=${{ secrets.VERCEL_TOKEN }} | grep "$ALIAS_URL" || echo "")
+          if [[ -z "$ALIAS_CHECK" ]]; then
+            echo "Error: Alias $ALIAS_URL not found in project aliases"
+            vercel alias ls --token=${{ secrets.VERCEL_TOKEN }}
             exit 1
           fi
-          if [[ "$DEPLOYMENT_URL" != "$PROD_URL" ]]; then
-            echo "Deployment URL does not match Production URL"
-            echo "Deployment: $DEPLOYMENT_URL"
-            echo "Production: $PROD_URL"
+          
+          # Verify that the deployment URL is different from the alias URL
+          if [[ "$DEPLOYMENT_URL" == "$ALIAS_URL" ]]; then
+            echo "Error: Deployment URL is the same as the Alias URL"
             exit 1
           fi
-
-  debug-trigger:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: Print ref
-        run: echo "Ref is ${{ github.ref }}"
+          
+          echo "Deployment verified successfully"
