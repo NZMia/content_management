@@ -82,13 +82,29 @@ jobs:
       - name: Deploy Project Artifacts to Vercel
         run: |
           DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          if [ "$DEPLOYMENT_URL" != "https://content-management-mia.vercel.app" ]; then
-            echo "Deployment URL does not match expected production URL"
+          echo "Production deployed to: $DEPLOYMENT_URL"
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
+      - name: Set alias for production
+        run: |
+          vercel alias set $DEPLOYMENT_URL content-management-mia.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
+          echo "Production alias set to: https://content-management-mia.vercel.app"
+      - name: Verify deployment
+        run: |
+          PROD_URL=$(vercel ls content-management-mia.vercel.app --token=${{ secrets.VERCEL_TOKEN }} | grep content-management-mia.vercel.app | awk '{print $2}')
+          echo "Production URL: $PROD_URL"
+          echo "Deployment URL: $DEPLOYMENT_URL"
+          if [[ "$PROD_URL" != "https://content-management-mia.vercel.app" ]]; then
+            echo "Production URL does not match expected URL"
             echo "Expected: https://content-management-mia.vercel.app"
-            echo "Actual: $DEPLOYMENT_URL"
+            echo "Actual: $PROD_URL"
             exit 1
           fi
-          echo "Production deployed to: $DEPLOYMENT_URL"
+          if [[ "$DEPLOYMENT_URL" != "$PROD_URL" ]]; then
+            echo "Deployment URL does not match Production URL"
+            echo "Deployment: $DEPLOYMENT_URL"
+            echo "Production: $PROD_URL"
+            exit 1
+          fi
 
   debug-trigger:
     runs-on: ubuntu-latest
