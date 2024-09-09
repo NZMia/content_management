@@ -87,16 +87,20 @@ jobs:
 
       - name: Get Production Domain
         run: |
-          PROJECT_NAME=$(vercel project ls --token=${{ secrets.VERCEL_TOKEN }} | grep -m1 -oP '(?<=■ ).*(?= )')
+          PROJECT_INFO=$(vercel project ls --token=${{ secrets.VERCEL_TOKEN }})
+          echo "Project Info:"
+          echo "$PROJECT_INFO"
+          
+          PROJECT_NAME=$(echo "$PROJECT_INFO" | awk '/content-management/ {print $1}')
           if [ -n "$PROJECT_NAME" ]; then
-            PROD_DOMAIN="${PROJECT_NAME}.vercel.app"
+            PROD_DOMAIN="${PROJECT_NAME}-production.vercel.app"
             echo "Production domain: https://$PROD_DOMAIN"
             echo "PROD_DOMAIN=$PROD_DOMAIN" >> $GITHUB_ENV
           else
             echo "Unable to determine project name"
+            echo "PROD_DOMAIN=content-management-production.vercel.app" >> $GITHUB_ENV
           fi
 
-          
       - name: Verify Deployment
         run: |
           echo "Unique deployment URL: $DEPLOYMENT_URL"
