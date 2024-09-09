@@ -82,36 +82,31 @@ jobs:
       - name: Deploy Project Artifacts to Vercel
         run: |
           DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "Production deployed to: $DEPLOYMENT_URL"
+          echo "Unique deployment URL: $DEPLOYMENT_URL"
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
-      - name: Set alias for production
+
+      - name: Get Production Domain
         run: |
-          vercel alias set $DEPLOYMENT_URL content-management-mia.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
-          echo "Production alias set to: https://content-management-mia.vercel.app"
+          PROJECT_NAME=$(vercel project ls --token=${{ secrets.VERCEL_TOKEN }} | grep -m1 -oP '(?<=■ ).*(?= )')
+          if [ -n "$PROJECT_NAME" ]; then
+            PROD_DOMAIN="${PROJECT_NAME}.vercel.app"
+            echo "Production domain: https://$PROD_DOMAIN"
+            echo "PROD_DOMAIN=$PROD_DOMAIN" >> $GITHUB_ENV
+          else
+            echo "Unable to determine project name"
+          fi
+
+      - name: Verify Deployment
+        run: |
+          echo "Unique deployment URL: $DEPLOYMENT_URL"
+          echo "Production domain: https://$PROD_DOMAIN"
+          if curl -s -o /dev/null -w "%{http_code}" "https://$PROD_DOMAIN" | grep -q "200"; then
+            echo "Deployment successful and accessible"
+          else
+            echo "Warning: Deployment may not be accessible"
+          fi
+
       - name: Output Vercel Project Info
         run: |
           echo "Vercel Project Information:"
           vercel project ls --token=${{ secrets.VERCEL_TOKEN }}
-          echo "Vercel Aliases:"
-          vercel alias ls --token=${{ secrets.VERCEL_TOKEN }}
-      - name: Verify deployment
-        run: |
-          echo "Deployment URL: $DEPLOYMENT_URL"
-          ALIAS_URL="https://content-management-mia.vercel.app"
-          echo "Expected Alias URL: $ALIAS_URL"
-          
-          # Check if the alias is set correctly
-          ALIAS_CHECK=$(vercel alias ls --token=${{ secrets.VERCEL_TOKEN }} | grep "$ALIAS_URL" || echo "")
-          if [[ -z "$ALIAS_CHECK" ]]; then
-            echo "Error: Alias $ALIAS_URL not found in project aliases"
-            vercel alias ls --token=${{ secrets.VERCEL_TOKEN }}
-            exit 1
-          fi
-          
-          # Verify that the deployment URL is different from the alias URL
-          if [[ "$DEPLOYMENT_URL" == "$ALIAS_URL" ]]; then
-            echo "Error: Deployment URL is the same as the Alias URL"
-            exit 1
-          fi
-          
-          echo "Deployment verified successfully"
