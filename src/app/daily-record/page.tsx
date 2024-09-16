@@ -176,7 +176,7 @@ export default function DailyRecord() {
         />
         <button
           type="submit"
-          className="btn-primary mt-2 sm:mt-0 sm:rounded-l-none"
+          className="btn-primary mt-2 rounded-md px-3 py-2 text-sm font-medium sm:mt-0 sm:rounded-l-none"
           disabled={!newTodo.trim()}
         >
           Add Daily Record
@@ -187,7 +187,10 @@ export default function DailyRecord() {
         <h2 className="text-xl font-semibold text-black dark:text-white">
           {showCompleted ? 'Completed Todos' : 'Active Todos'}
         </h2>
-        <button onClick={toggleShowCompleted} className="btn-secondary">
+        <button
+          onClick={toggleShowCompleted}
+          className="btn-secondary rounded-md px-3 py-2 text-sm font-medium"
+        >
           {showCompleted ? 'Show Active' : 'Show Completed'}
         </button>
       </div>
@@ -330,7 +333,10 @@ export default function DailyRecord() {
       )}
 
       {hasMore && !isLoading && (
-        <button onClick={loadMore} className="btn-secondary mt-4 w-full">
+        <button
+          onClick={loadMore}
+          className="btn-secondary mt-4 w-full rounded-md px-3 py-2 text-sm font-medium"
+        >
           Load More
         </button>
       )}
