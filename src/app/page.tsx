@@ -12,10 +12,16 @@ export default function Home() {
           experiences with cutting-edge technologies.
         </p>
         <div className="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-x-4 sm:space-y-0">
-          <a href="#projects" className="btn-primary">
+          <a
+            href="#projects"
+            className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white transition duration-150 ease-in-out dark:bg-white dark:text-black"
+          >
             View Projects
           </a>
-          <a href="#contact" className="btn-secondary">
+          <a
+            href="#contact"
+            className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white transition duration-150 ease-in-out dark:bg-white dark:text-black"
+          >
             Contact Me
           </a>
         </div>

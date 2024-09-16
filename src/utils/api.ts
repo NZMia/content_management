@@ -45,3 +45,9 @@ export async function handleApiRequest<T>({
     throw new Error(errorMessage);
   }
 }
+
+export function getBaseUrl() {
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+  const host = process.env.VERCEL_URL || 'localhost:3000';
+  return `${protocol}://${host}`;
+}
