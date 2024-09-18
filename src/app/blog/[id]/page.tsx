@@ -31,11 +31,9 @@ export default function BlogPostPage() {
           throw new Error('Failed to fetch blog post');
         }
         const data = await response.json();
-        JSON.stringify(post, null, 2);
         setPost(data);
       } catch (err) {
         setError('Error fetching blog post');
-        console.error(err);
       } finally {
         setIsLoading(false);
       }
@@ -52,24 +50,24 @@ export default function BlogPostPage() {
     return <div>Error: {error || 'Post not found'}</div>;
   }
 
-  const renderBlock = (block: any) => {
+  const renderBlock = (block: any, index: number) => {
     switch (block.type) {
       case 'paragraph':
-        return <Paragraph block={block} />;
+        return <Paragraph block={block} key={index} />;
       case 'heading_1':
       case 'heading_2':
       case 'heading_3':
-        return <Heading block={block} />;
+        return <Heading block={block} key={index} />;
       case 'code':
-        return <Code block={block} />;
+        return <Code block={block} key={index} />;
       case 'quote':
-        return <Quote block={block} />;
+        return <Quote block={block} key={index} />;
       case 'callout':
-        return <Callout block={block} />;
+        return <Callout block={block} key={index} />;
       case 'toggle':
-        return <Toggle block={block} />;
+        return <Toggle block={block} key={index} />;
       case 'bulleted_list_item':
-        return <BulletedListItem block={block} />;
+        return <BulletedListItem block={block} key={index} />;
       default:
         console.log('Unhandled block type:', block.type);
         return null;
@@ -108,7 +106,9 @@ export default function BlogPostPage() {
         </div>
       </div>
       <div className="prose dark:prose-invert">
-        {post.content.map((block: any) => renderBlock(block))}
+        {post.content.map((block: any, index: number) =>
+          renderBlock(block, index)
+        )}
       </div>
     </div>
   );

@@ -31,7 +31,6 @@ export default function Blog() {
         setPosts(data);
       } catch (err) {
         setError('Error fetching blog posts');
-        console.error(err);
       } finally {
         setIsLoading(false);
       }
