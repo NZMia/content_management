@@ -81,7 +81,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(posts);
   } catch (error) {
-    console.error('Error fetching blog posts:', error);
     return NextResponse.json(
       { error: 'Error fetching blog posts' },
       { status: 500 }
@@ -123,8 +122,6 @@ async function GET_BY_ID(id: string) {
       coverImage: coverImage,
       content: content,
     };
-
-    console.log('Processed post:', JSON.stringify(post, null, 2));
     return NextResponse.json(post);
   } catch (error) {
     console.error('Error fetching blog post by id:', error);

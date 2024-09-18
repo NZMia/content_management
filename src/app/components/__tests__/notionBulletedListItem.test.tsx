@@ -14,7 +14,6 @@ describe('notionBulletedListItem', () => {
 
     const { getByText } = render(<BulletedListItem block={block} />);
     const listItem = getByText('Test bullet point');
-    console.log(listItem);
     expect(listItem).toBeInTheDocument();
     expect(listItem.tagName).toBe('SPAN');
     // expect(listItem).toHaveClass('list-disc');

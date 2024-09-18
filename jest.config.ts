@@ -29,6 +29,8 @@ const config: Config = {
     '!src/**/*.stories.{js,jsx,ts,tsx}',
     '!src/pages/_app.tsx',
     '!src/pages/_document.tsx',
+    // Make sure to include the API routes
+    'src/app/api/**/*.{js,ts}',
   ],
 };
 
