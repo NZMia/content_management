@@ -10,12 +10,11 @@ The project is deployed and can be accessed at: [https://content-management-prod
 
 ## Technical Stack
 
-- **Frontend Framework**: Next.js 13+ (with App Router)
-- **UI Library**: React 18+
-- **Styling**: Tailwind CSS 3+
-- **State Management**: React Hooks
+- **Frontend Framework**: Next.js 13+ (with App Router), Typescript
+- **UI Library**: Tailwindcss
 - **Testing**: Jest 29+, React Testing Library 14+
 - **Deployment**: Vercel
+- **Environment**: Preview  | Production
 
 ## Key Features
 
@@ -27,7 +26,59 @@ The project is deployed and can be accessed at: [https://content-management-prod
 6. **Custom Access Control**: Options for managing content visibility and access.
 
 ## Project Structure
+```
 
+├── LICENSE
+├── README.md
+├── commitlint.config.cjs
+├── jest.config.ts
+├── jest.setup.ts
+├── next-env.d.ts
+├── next.config.mjs
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── public
+│   ├── next.svg
+│   └── vercel.svg
+├── src
+│   ├── app
+│   │   ├── __tests__
+│   │   │   ├── layout.test.tsx
+│   │   │   └── page.test.tsx
+│   │   ├── api
+│   │   │   ├── __tests__
+│   │   │   ├── blog
+│   │   │   └── daily-records
+│   │   ├── blog
+│   │   │   ├── [id]
+│   │   │   ├── __tests__
+│   │   │   └── page.tsx
+│   │   ├── components
+│   │   │   ├── Footer.tsx
+│   │   │   ├── Navigation.tsx
+│   │   │   ├── ThemeToggle.tsx
+│   │   │   ├── Tooltip.tsx
+│   │   │   ├── __tests__
+│   │   │   └── notion-blocks
+│   │   ├── contact
+│   │   │   ├── __test__
+│   │   │   └── page.tsx
+│   │   ├── daily-record
+│   │   │   ├── __test__
+│   │   │   └── page.tsx
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── lib
+│   └── utils
+│       ├── __tests__
+│       │   └── api.test.ts
+│       └── api.ts
+├── tailwind.config.ts
+└── tsconfig.json
+```
 ## Setup and Installation
 
 1. Clone the repository:
@@ -61,7 +112,15 @@ The project is deployed and can be accessed at: [https://content-management-prod
 ## Running Tests
 
 To run the test suite:
-
+```lint test
+   npm run lint
+```
+```lint fix
+   npm run lint:fix
+```
+```unit test
+   npm run test
+```
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
