@@ -13,7 +13,7 @@ jest.mock('next/navigation', () => ({
 describe('Navigation', () => {
   it('renders correctly', () => {
     render(<Navigation />);
-    expect(screen.getByText('Mia')).toBeInTheDocument();
+    expect(screen.getByText('Content Publisher')).toBeInTheDocument();
     expect(screen.getAllByText('Home')[0]).toBeInTheDocument();
     expect(screen.getByText('Daily Record')).toBeInTheDocument();
     expect(screen.getByText('Blog')).toBeInTheDocument();
