@@ -22,14 +22,22 @@ const config: Config = {
   ],
   collectCoverage: true,
   coverageDirectory: '<rootDir>/coverage',
-  coverageReporters: ['lcov', 'text', 'html'],
+  coverageReporters: ['lcov', 'text-summary', 'html'],
+  coverageProvider: 'v8', // The default coverage provider
+  coverageThreshold: {
+    global: {
+      branches: 0, // Set branch threshold to 0 to effectively disable it
+    },
+  },
+
+  // Collect coverage from specific files and exclude others
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
     '!src/pages/_app.tsx',
     '!src/pages/_document.tsx',
-    // Make sure to include the API routes
+    // Include API routes for coverage
     'src/app/api/**/*.{js,ts}',
   ],
 };
