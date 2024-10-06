@@ -126,29 +126,6 @@ describe('DailyRecord Component', () => {
     });
   });
 
-  it('updates todo status', async () => {
-    const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
-    (handleApiRequest as jest.Mock)
-      .mockResolvedValueOnce({ todos: [mockTodo], hasMore: false })
-      .mockResolvedValueOnce({});
-
-    await act(async () => {
-      render(<DailyRecord />);
-    });
-
-    const statusSelect = screen.getByRole('combobox');
-    await act(async () => {
-      fireEvent.change(statusSelect, { target: { value: 'In progress' } });
-    });
-
-    expect(handleApiRequest).toHaveBeenCalledWith({
-      url: '/api/daily-records',
-      method: 'PUT',
-      data: { id: '1', status: 'In progress' },
-      errorMessage: 'Failed to update todo status',
-    });
-  });
-
   it('deletes a todo', async () => {
     const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
     (handleApiRequest as jest.Mock)
@@ -368,40 +345,6 @@ describe('DailyRecord Component', () => {
     expect(addButton).not.toBeDisabled();
   });
 
-  it('handles error when updating todo status', async () => {
-    const mockTodo = [{ id: '1', title: 'Test Todo', status: 'Not started' }];
-    (handleApiRequest as jest.Mock).mockImplementation((options) => {
-      if (options.method === 'GET') {
-        return Promise.resolve({ todos: mockTodo, hasMore: false });
-      }
-      if (options.method === 'PUT') {
-        return Promise.reject(new Error('Failed to update todo status'));
-      }
-    });
-
-    await act(async () => {
-      render(<DailyRecord />);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Test Todo')).toBeInTheDocument();
-    });
-
-    const statusSelect = screen.getByRole('combobox');
-    await act(async () => {
-      fireEvent.change(statusSelect, { target: { value: 'In progress' } });
-    });
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Failed to update todo status')
-      ).toBeInTheDocument();
-    });
-
-    // 验证状态没有更新
-    expect(statusSelect).toHaveValue('Not started');
-  });
-
   it('handles error when deleting todo', async () => {
     const mockTodo = {
       id: '2',
@@ -453,6 +396,7 @@ describe('DailyRecord Component', () => {
       await screen.findByText('Failed to update todo')
     ).toBeInTheDocument();
   });
+
   it('renders edit mode for a todo', async () => {
     const mockTodo = { id: '1', title: 'Test Todo', status: 'Not started' };
     (handleApiRequest as jest.Mock).mockResolvedValueOnce({
@@ -471,6 +415,7 @@ describe('DailyRecord Component', () => {
     expect(screen.getByLabelText('Save todo')).toBeInTheDocument();
     expect(screen.getByLabelText('Cancel editing')).toBeInTheDocument();
   });
+
   it('renders "No more todos to load" message', async () => {
     (handleApiRequest as jest.Mock).mockResolvedValueOnce({
       todos: [{ id: '1', title: 'Test Todo', status: 'Not started' }],
@@ -492,5 +437,38 @@ describe('DailyRecord Component', () => {
     render(<DailyRecord />);
 
     expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
+  });
+
+  it('disables edit and delete buttons for completed todos', async () => {
+    const mockTodo = { id: '1', title: 'Completed Todo', status: 'Completed' };
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [mockTodo],
+      hasMore: false,
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    const editButton = screen.queryByLabelText('Edit todo');
+    const deleteButton = screen.queryByLabelText('Delete todo');
+
+    expect(editButton).toHaveAttribute('disabled');
+    expect(deleteButton).toHaveAttribute('disabled');
+  });
+
+  it('renders status as text instead of dropdown for completed todos', async () => {
+    const mockTodo = { id: '1', title: 'Completed Todo', status: 'Completed' };
+    (handleApiRequest as jest.Mock).mockResolvedValueOnce({
+      todos: [mockTodo],
+      hasMore: false,
+    });
+
+    await act(async () => {
+      render(<DailyRecord />);
+    });
+
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByText('Completed')).toBeInTheDocument();
   });
 });

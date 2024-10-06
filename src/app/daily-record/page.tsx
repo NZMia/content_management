@@ -70,25 +70,6 @@ export default function DailyRecord() {
     }
   };
 
-  const updateTodoStatus = async (id: string, newStatus: string) => {
-    try {
-      await handleApiRequest({
-        url: '/api/daily-records',
-        method: 'PUT',
-        data: { id, status: newStatus },
-        errorMessage: 'Failed to update todo status',
-      });
-      setTodos(
-        todos.map((todo) =>
-          todo.id === id ? { ...todo, status: newStatus } : todo
-        )
-      );
-      setError(null);
-    } catch (error) {
-      setError((error as Error).message);
-    }
-  };
-
   const deleteTodo = async (id: string) => {
     try {
       await handleApiRequest({
@@ -213,21 +194,16 @@ export default function DailyRecord() {
                 {todo.title}
               </span>
             )}
+
             <div className="flex items-center">
               {!showCompleted && (
-                <select
-                  role="combobox"
-                  value={todo.status}
-                  onChange={(e) => {
-                    updateTodoStatus(todo.id, e.target.value);
-                  }}
-                  className="mr-2 rounded-md border border-gray-300 p-1 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                <span
+                  className={`inline-block w-24 rounded-md px-2 py-1 text-center text-sm font-medium ${todo.status === 'In progress' ? 'bg-amber-300' : 'bg-gray-300'} text-white transition duration-150 ease-in-out`}
                 >
-                  <option value="Not started">Not started</option>
-                  <option value="In progress">In progress</option>
-                  <option value="Done">Completed</option>
-                </select>
+                  {todo.status}
+                </span>
               )}
+
               {editingTodo === todo.id ? (
                 <>
                   <Tooltip text="Save changes">
@@ -276,11 +252,39 @@ export default function DailyRecord() {
                   </Tooltip>
                 </>
               ) : (
-                <Tooltip text="Edit todo">
+                !showCompleted && (
+                  <Tooltip text="Edit todo">
+                    <button
+                      onClick={() => startEditing(todo)}
+                      className="mr-2 p-1 text-black hover:text-gray-600 dark:text-white dark:hover:text-gray-300"
+                      aria-label="Edit todo"
+                      disabled={todo.status === 'Completed'} // Disable edit for completed todos
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        />
+                      </svg>
+                    </button>
+                  </Tooltip>
+                )
+              )}
+              {!showCompleted && (
+                <Tooltip text="Delete todo">
                   <button
-                    onClick={() => startEditing(todo)}
-                    className="mr-2 p-1 text-black hover:text-gray-600 dark:text-white dark:hover:text-gray-300"
-                    aria-label="Edit todo"
+                    onClick={() => deleteTodo(todo.id)}
+                    className="p-1 text-black hover:text-gray-600 dark:text-white dark:hover:text-gray-300"
+                    aria-label="Delete todo"
+                    disabled={todo.status === 'Completed'} // Disable delete for completed todos
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -293,34 +297,12 @@ export default function DailyRecord() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                       />
                     </svg>
                   </button>
                 </Tooltip>
               )}
-              <Tooltip text="Delete todo">
-                <button
-                  onClick={() => deleteTodo(todo.id)}
-                  className="p-1 text-black hover:text-gray-600 dark:text-white dark:hover:text-gray-300"
-                  aria-label="Delete todo"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
-              </Tooltip>
             </div>
           </div>
         ))}
